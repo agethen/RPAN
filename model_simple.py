@@ -27,6 +27,7 @@ class Graph():
     self.l_pose     = 1.0
 
     self.DIM_LSTM   = 512                           # Dimensionality of LSTM
+    self.DIM_ATT    = 32  # Either 32 (Sub-JHMDB) or 128 (PennAction)
 
     # Init ResNet
     self.net        = resnet.ResNet()               # We are using ResNet as base DCN. Change here.
@@ -36,7 +37,7 @@ class Graph():
   def generate_attention_maps( self, state, feature ):
 
     h, c  = state
-    DIM   = 32  # Either 32 (Sub-JHMDB) or 128 (PennAction)
+    DIM   = self.DIM_ATT
     
     # Compute map (Eq. 2)
     Ac    = util.conv2d( feature, [1, 1, DIM], "att_pose_c" )
