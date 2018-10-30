@@ -21,7 +21,7 @@ The file `video1.npy` is an example of what `load_pose_map()` expects. The forma
 We assume that the video is stored as a collection of jpeg files, sampled at 25 fps. The files are organized as: `PREFIX/video_id/frame_000001.jpg` etc.
 
 ## Miscellaneous
-Unlike the published paper, we use ResNet v2-50 to extract the convolutional cube. You can download our ResNet weights at http://cmlab.csie.ntu.edu.tw/~agethen/resnet_v2.npy .
+Unlike the published paper, we use ResNet v2-50 to extract the convolutional cube. You can download our ResNet weights at http://cmlab.csie.ntu.edu.tw/~agethen/resnet_v2.npy . Please do not forget to edit util.py and adjust the path to the ResNet weights.
 
 For any feedback or questions, feel free to send a message to
 > s [dot] agethen [at] gmail [dot] com.

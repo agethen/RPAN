@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy
 
-W = '/home/phd/01/agethen/DCN-Models/vgg16_new.npy'
+W = '/home/phd/01/agethen/DCN-Models/resnet_v2.npy'
 try:
   print "Util.py: Loading from", W
   param_dict = numpy.load( W ).item()
