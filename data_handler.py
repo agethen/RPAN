@@ -204,7 +204,7 @@ class DataHandler():
 
       # Load RGB data
       for t in range( self.T ):
-        frame = cv2.imread( self.PREFIX_RGB +  + "/" + "frame" + "_" + str( frame_pos[t] ).zfill(6) + ".jpg" )
+        frame = cv2.imread( self.PREFIX_RGB + vid + "/" + "frame" + "_" + str( frame_pos[t] ).zfill(6) + ".jpg" )
 
         if frame is None:
           print "I/O error reading from", vid, ", t=", frame_pos[t]
