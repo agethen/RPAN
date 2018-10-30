@@ -7,15 +7,9 @@ import cv2
 # We assume the RGB frames are available as jpeg files, and named starting from "frame_000001.jpg".
 # The frames of video xxx are located in a subfolder of same name, which located in PREFIX_RGB.
 
-# The annotation file requires fields `id` (folder name of video),
-# `actions` (';' seperated list of <action time_start time_end> tuples), and `length` (the video length in seconds).
-
 class DataHandler():
   # Read annotations from file `annotation`.
-  # T: Number of frames to load from each video.
-  # C: Number of action classes.
-  # is_test: Does this class handle a test or a training dataset?
-  def __init__( self, PREFIX_RGB, PREFIX_POSE, annotation, T, C, is_test = False ):
+  def __init__( self, PREFIX_RGB, PREFIX_POSE, annotation, T, is_test = False, do_resize = None ):
 
     self.annotations = csv.DictReader( open( annotation ) )
     self.is_test     = is_test
@@ -23,14 +17,16 @@ class DataHandler():
 
     self.PREFIX_RGB   = PREFIX_RGB    # The directory containing RGB frames (as .jpg). For each video, expect a subfolder.
     self.PREFIX_POSE  = PREFIX_POSE   # We keep CMU poses in numpy files. Each file has shape NUM_FRAMES x 18 x 3, and contains pose_coordinates in [0,1].
+    self.do_resize    = do_resize
 
     self.T            = T             # How many frames per video
-    self.C            = C             # Number of classes
     self.J            = 18            # Number of joints in CMU
     self.stepsize     = 5             # Sample every `stepsize`-th frame
 
     self.actions = []
+    self.known_classes = []
 
+    # Annotation reader for format in example.csv
     for row in self.annotations:
       fps   = 25.0                              # TODO: Read actual FPS instead of assuming 25 fps.
       v_len = int( float(row["length"]) * fps)  # Length of video in frames
@@ -48,10 +44,22 @@ class DataHandler():
           if ts >= te:
             continue
 
+          if cid not in self.known_classes:
+            self.known_classes.append( cid )
+
           self.actions.append( (cid, row["id"], ts, te ) ) # Class, Video-ID, Start, End
 
     # Permutation (for shuffling)
     self.perm = range( len(self.actions) )
+    self.C    = self.num_classes()
+
+    self.video_shapes = {}
+    self.video_crops  = {}
+    self.video_ts     = {}
+
+  # Note: We do not protect against invalid labels (values >= C) at this moment
+  def num_classes( self ):
+    return len(self.known_classes)
 
   # Return number of items in dataset
   def num( self ):
@@ -83,33 +91,39 @@ class DataHandler():
   # Given human pose annotations (in coordinate form), render the groundtruth pose maps.
   def load_pose_map( self, start, end ):
     
-    POSE_SIZE = 7 # Size of final pose map
+    POSE_SIZE = 7   # Spatial dimensions of pose map will be POSE_SIZE x POSE_SIZE
 
     posemaps  = numpy.zeros( [end-start, self.T, POSE_SIZE, POSE_SIZE, self.J], dtype=numpy.float32 )
 
     for b in range( start, end ):
+
       # Find video.
-      pb     = self.perm[b]
-      action = self.actions[pb]
-      video  = action[1]
+      pb            = self.perm[b]
+      _,video,_, _  = self.actions[pb]
 
       # Load corresponding pose file.
-      posefile = numpy.load( self.PREFIX_POSE + video + ".npy" )
+      try:
+        posefile = numpy.load( self.PREFIX_POSE + video + ".npy" )
+      except:
+        print "Could not open poses for", video
+        continue
 
       # The currently used crop and shape of RGB image.
-      c        = self.last_crops[b-start]
-      s        = self.last_shapes[b-start]
+      c        = self.video_crops[pb]
+      s        = self.video_shapes[pb]
 
       # The currently used timestamp in the video
-      ts   = self.last_ts[b-start]
+      ts   = self.video_ts[pb]
 
       for t in range( self.T ):
 
         # Note that we assume that poses were sampled at the same fps.
         tt = ts[t]-1
-        tt = min( posefile.shape[0], tt )
-
-        pose = posefile[ tt ]
+        try:
+          pose = posefile[ tt ]
+        except:
+          print "Could not read pose in", video, "at t=", tt
+          continue
 
         for j in range( self.J ):
 
@@ -132,7 +146,7 @@ class DataHandler():
           # Resize m from (224x224) --> (7x7)
           m     = cv2.resize( m, (POSE_SIZE, POSE_SIZE) )
 
-          # Normalize, if not fully 0.
+          # Normalize, unless all 0.
           if m.max() > 0:
             m = m * (1./m.max())
 
@@ -152,50 +166,51 @@ class DataHandler():
 
     for b in range( start, end ):
 
-      pb            = self.perm[b]
-      video, ts, te = self.actions[pb][1:]
+      pb               = self.perm[b]
+      cid, vid, ts, te = self.actions[pb]
+      
+      label[b-start, :] = cid
 
-      label[b-start, :] = class_dict[action[0]]
-
-      # Sample strategy depends on whether we are in training or test phase.
+      # Sample strategies:
+      # Train phase: Pick random offset in annotated action, such that we can load T frames
+      # Test phase:  Load T frames beginning at first frame of annotated action
       if self.is_test == False:
         t_off     = random.randint( ts, max( te-self.stepsize*self.T, ts ) )
         frame_pos = range( t_off, t_off + self.stepsize*self.T, self.stepsize )
       else:
         frame_pos = range( ts, ts + self.stepsize*self.T, self.stepsize )
 
-      # This will be the first frame
-      self.last_ts.append( frame_pos )
+      self.video_ts[pb] = frame_pos
 
       # Read one frame to determine size
-      frame     = cv2.imread( self.PREFIX_RGB + video + "/" + "frame" + "_" + str( 1 ).zfill(6) + ".jpg" )
+      frame     = cv2.imread( self.PREFIX_RGB + vid + "/" + "frame" + "_" + str( 1 ).zfill(6) + ".jpg" )
 
       if frame is None:
-        print "Could not read video", video
-        self.last_crops.append( (0,0) )
+        print "Could not read video", vid
+        self.video_shapes[pb] = (0,0)
         continue
+      else:
+        self.video_shapes[pb] = frame.shape
 
-      # Generate a random crop
-      sh    = [256., 256.] # frame.shape
+      # Generate a random 224x224 crop
+      sh    = frame.shape if self.do_resize is None else self.do_resize
       crop  = (random.randint( 0, sh[0]-224 ), random.randint( 0, sh[1]-224 ))
 
-      self.last_shapes.append( sh )
-      self.last_crops.append( crop )
+      self.video_crops[pb] = crop
 
       # Load RGB data
       for t in range( self.T ):
-        frame = cv2.imread( self.PREFIX_RGB + video + "/" + "frame" + "_" + str( frame_pos[t] ).zfill(6) + ".jpg" )
+        frame = cv2.imread( self.PREFIX_RGB +  + "/" + "frame" + "_" + str( frame_pos[t] ).zfill(6) + ".jpg" )
 
         if frame is None:
-          data[b-start, t]  = self.mean 	# I.e., the data will be all zeros after mean substraction.
+          print "I/O error reading from", vid, ", t=", frame_pos[t]
+          data[b-start, t]  = self.mean 	# I.e., the data will be all zeros.
         else:
-          frame             = cv2.resize( frame, (sh[0],sh[1]) )
+          if self.do_resize is not None:
+            frame             = cv2.resize( frame, (sh[0],sh[1]) )
           data[b-start, t]  = frame[ crop[0] : crop[0] + 224, crop[1] : crop[1] + 224 ]
 
     data -= self.mean
-
-    # Note that cv2 loads images as BGR. Resnet was however trained on RGB.
-    # Transpose data: BGR --> RGB
-    data  = data[:,:,:,:, ::-1 ]
+    data  = data[:,:,:,:, ::-1 ] # Note that cv2 loads images as BGR. Transpose: BGR --> RGB
 
     return data, label

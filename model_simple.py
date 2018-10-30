@@ -16,7 +16,7 @@ class Graph():
     self.P          = tf.placeholder( tf.float32, [None, self.T, 7, 7, self.J] )
 
     self.LR         = tf.placeholder( tf.float32 )  # Learning rate
-    self.lambda_l2  = tf.placeholder( tf.float32 )  # Regularization factor
+    self.gamma      = tf.placeholder( tf.float32 )  # Regularization factor
     self.phase      = tf.placeholder( tf.bool )     # Training phase
 
     self.BATCH      = tf.shape( self.X )[0]
@@ -40,7 +40,7 @@ class Graph():
     DIM   = self.DIM_ATT
     
     # Compute map (Eq. 2)
-    Ac    = util.conv2d( feature, [1, 1, DIM], "att_pose_c" )
+    Ac    = util.conv2d( feature, [1, 1, DIM], name="att_pose_c" )
     Ah    = util.fc( h, DIM, "att_pose_h" )
 
     # A_c: Bx7x7x32; A_h: Bx32.
@@ -48,7 +48,7 @@ class Graph():
     tmp   = tf.nn.tanh( tf.reshape( Ah, [self.BATCH, 1, 1, DIM] ) + Ac )
 
     # v
-    res   = util.conv2d( tmp, [1, 1, self.J], "att_map" )
+    res   = util.conv2d( tmp, [1, 1, self.J], name="att_map" )
     res   = tf.reshape( res, [self.BATCH, 7, 7, self.J] )
 
     # Normalization (Eq. 3)
@@ -164,7 +164,7 @@ class Graph():
     loss     = tf.reduce_mean(    self.l_action * loss_pose_pre
                                 + self.l_pose   * loss_pose_l2 )
 
-    reg_loss = self.lambda_l2 * tf.reduce_sum( reg_loss )
+    reg_loss = self.gamma * tf.reduce_sum( reg_loss )
     total    = reg_loss + loss
 
     # Optimizer + Batch Gradient Accumulation
@@ -190,5 +190,5 @@ class Graph():
     self.accum_vars = accum_vars
 
     self.result     = tf.nn.softmax( h_pred )
-
-    return op, total
+    self.op         = op 
+    self.total_loss = total

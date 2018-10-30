@@ -1,8 +1,9 @@
 import tensorflow as tf
 import numpy
 
-W = 'resnet_v2.npy'
+W = '/home/phd/01/agethen/DCN-Models/vgg16_new.npy'
 try:
+  print "Util.py: Loading from", W
   param_dict = numpy.load( W ).item()
 except:
   print "NOT loading weights, as file", W, "was not found. Please edit util.py."
@@ -24,9 +25,11 @@ def fc( bottom, num_out, name, use_bias = True ):
 
   if name + "/weights" in param_dict.keys():
     init_W = tf.constant_initializer(value=param_dict[name + "/weights"], dtype=tf.float32)
+    print "Loading", name
   if name + "/biases"  in param_dict.keys() and use_bias:
     init_B = tf.constant_initializer(value=param_dict[name + "/biases"], dtype=tf.float32)
-    
+    print "loading", name
+
   W = tf.get_variable( name + "/weights", shape = [num_in, num_out], initializer = init_W, regularizer = tf.contrib.layers.l2_regularizer( 1.0 ) )
 
   if use_bias:
@@ -35,7 +38,7 @@ def fc( bottom, num_out, name, use_bias = True ):
   else:
     return tf.matmul( bottom, W )
 
-def conv2d( bottom, ksize, stride = [1,1,1,1], padding = 'SAME', name = "", use_bias = True, ):
+def conv2d( bottom, ksize, stride = [1,1,1,1], padding = 'SAME', name = "", use_bias = True ):
   num_c = bottom.get_shape().as_list()[-1]
   kernel = [ksize[0], ksize[1], num_c, ksize[2]]
 
@@ -44,16 +47,17 @@ def conv2d( bottom, ksize, stride = [1,1,1,1], padding = 'SAME', name = "", use_
 
   if name + "/weights" in param_dict.keys():
     init_W = tf.constant_initializer( value=param_dict[name + "/weights"], dtype=tf.float32)
-  if name + "/biases" in param_dict.keys() and use_bias:
-    init_B = tf.constant_initializer( value=param_dict[name + "/biases"],  dtype=tf.float32)    
 
-  w = tf.get_variable( name + "/weights", shape = kernel, initializer = init_W, regularizer = tf.contrib.layers.l2_regularizer( 1.0 ) )
+  if name + "/biases" in param_dict.keys() and use_bias:
+    init_B = tf.constant_initializer( value=param_dict[name + "/biases"],  dtype=tf.float32)
+
+  W = tf.get_variable( name + "/weights", shape = kernel, initializer = init_W, regularizer = tf.contrib.layers.l2_regularizer( 1.0 ) )
 
   if use_bias:
     b = tf.get_variable( name + "/biases",  shape = [ksize[2]], initializer = init_B )
-    return tf.nn.conv2d( bottom, w, strides = stride, padding = padding ) + b
+    return tf.nn.conv2d( bottom, W, strides = stride, padding = padding ) + b
   else:
-    return tf.nn.conv2d( bottom, w, strides = stride, padding = padding )
+    return tf.nn.conv2d( bottom, W, strides = stride, padding = padding )
 
 def conv2d_transpose( bottom, ksize, stride, name ):
   shape = bottom.get_shape().as_list()
@@ -61,9 +65,9 @@ def conv2d_transpose( bottom, ksize, stride, name ):
   kernel = [ksize[0], ksize[1], ksize[2], num_c]
   output_shape = [shape[0], shape[1]*stride[1], shape[2]*stride[2], ksize[2]]
 
-  w = tf.get_variable( name + "/weights", shape = kernel,     initializer = tf.contrib.layers.xavier_initializer_conv2d(), regularizer = tf.contrib.layers.l2_regularizer( 1.0 ) )
+  W = tf.get_variable( name + "/weights", shape = kernel,     initializer = tf.contrib.layers.xavier_initializer_conv2d(), regularizer = tf.contrib.layers.l2_regularizer( 1.0 ) )
   b = tf.get_variable( name + "/biases",  shape = [ksize[2]], initializer = tf.zeros_initializer() )
-  return tf.nn.conv2d_transpose( bottom, w, output_shape, strides = stride ) + b
+  return tf.nn.conv2d_transpose( bottom, W, output_shape, strides = stride ) + b
 
 def batch_norm( input, name, phase, center=True, scale=True, axis=3 ):
 
@@ -100,10 +104,10 @@ def conv3d( bottom, ksize, stride, padding, name, use_bias = True ):
     init_W = tf.constant_initializer( value = param_dict[name + "/weights"], dtype = tf.float32 )
   if name + "/biases" in param_dict.keys() and use_bias:
     init_B = tf.constant_initializer( value = param_dict[name + "/biases"], dtype = tf.float32 )
-  w = tf.get_variable( name + "/weights", shape = kernel, initializer = init_W, regularizer = tf.contrib.layers.l2_regularizer( 1.0 ) )
+  W = tf.get_variable( name + "/weights", shape = kernel, initializer = init_W, regularizer = tf.contrib.layers.l2_regularizer( 1.0 ) )
 
   if use_bias:
     b = tf.get_variable( name + "/biases",  shape = [ksize[3]], initializer = init_B )
-    return tf.nn.conv3d( bottom, w, strides = stride, padding = padding ) + b
+    return tf.nn.conv3d( bottom, W, strides = stride, padding = padding ) + b
   else:
-    return tf.nn.conv3d( bottom, w, strides = stride, padding = padding )
+    return tf.nn.conv3d( bottom, W, strides = stride, padding = padding )

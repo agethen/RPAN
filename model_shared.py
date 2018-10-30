@@ -43,7 +43,7 @@ class Graph():
     # In other words, we need 5 `tmp` terms, or equivalently, 1 `tmp` term with 5*DIM channels. 
     
     # Compute map (Eq. 2)
-    Ac    = util.conv2d( feature, [1, 1, 5*DIM], "att_pose_c", use_bias = False )
+    Ac    = util.conv2d( feature, [1, 1, 5*DIM], name="att_pose_c", use_bias = False )
     Ah    = util.fc( h, 5*DIM, "att_pose_h", use_bias = False )
     bias  = tf.get_variable( "bias", shape = [5*DIM], initializer=tf.zeros_initializer() )
 
@@ -58,7 +58,7 @@ class Graph():
       # v is just a 1x1 convolution.
       # NOTE: From paper, it is not entirely clear if v is shared between body parts.
       # We assume this is NOT the case.
-      res   = util.conv2d( tmp[i], [1, 1, self.J], "att_map_bp" + str(i) )
+      res   = util.conv2d( tmp[i], [1, 1, self.J], name="att_map_bp" + str(i) )
       res   = tf.reshape( res, [self.BATCH, 7, 7, self.J] )
 
       # Normalization (Eq. 3)
@@ -180,7 +180,7 @@ class Graph():
     loss     = tf.reduce_mean(    self.l_action * loss_pose_pre
                                 + self.l_pose   * loss_pose_l2 )
 
-    reg_loss = self.lambda_l2 * tf.reduce_sum( reg_loss )
+    reg_loss = self.lambda_l2 * tf.reduce_sum( reg_loss )  # Note: This is L2-regularization (see util.py)
     total    = reg_loss + loss
 
     # Optimizer + Batch Gradient Accumulation
@@ -206,5 +206,5 @@ class Graph():
     self.accum_vars = accum_vars
 
     self.result     = tf.nn.softmax( h_pred )
-
-    return op, total
+    self.op         = op
+    self.total_loss = total

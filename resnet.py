@@ -14,7 +14,7 @@ class ResNet():
     return tf.pad( data, [[0,0], [pb,pe], [pb,pe], [0,0]])
 
   def projection_shortcut( self, input, num_conv, strides, name ):
-    h0 = util.conv2d( input, [1,1,num_conv], name + "/shortcut", strides, use_bias = False, padding = ('SAME' if strides[1] == 1 else 'VALID') )
+    h0 = util.conv2d( input, [1,1,num_conv], strides, name=name + "/shortcut", use_bias = False, padding = ('SAME' if strides[1] == 1 else 'VALID') )
     return h0
 
   def resnet_v2_bottleneck_block( self, input, num_conv, strides, name, projection_shortcut = False ):
@@ -28,18 +28,18 @@ class ResNet():
     if projection_shortcut:
       shortcut = self.projection_shortcut( bn1, num_conv*4, strides, name )
 
-    conv1 = util.conv2d( bn1, [1,1,num_conv], name + "/conv1", [1,1,1,1], use_bias = False )
+    conv1 = util.conv2d( bn1, [1,1,num_conv], [1,1,1,1], name = name + "/conv1", use_bias = False )
     bn2   = util.batch_norm( conv1, name + "/bn2", self.phase )
     bn2   = tf.nn.relu( bn2 )
 
     if strides[1] > 1:
       bn2 = self.pad( bn2, 3 )
 
-    conv2 = util.conv2d( bn2, [3,3,num_conv], name + "/conv2", strides, use_bias = False, padding = ('SAME' if strides[1] == 1 else 'VALID') )
+    conv2 = util.conv2d( bn2, [3,3,num_conv], strides, name=name + "/conv2", use_bias = False, padding = ('SAME' if strides[1] == 1 else 'VALID') )
     bn3   = util.batch_norm( conv2, name + "/bn3", self.phase )
     bn3   = tf.nn.relu( bn3 )
 
-    conv3 = util.conv2d( bn3, [1,1,num_conv*4], name + "/conv3", [1,1,1,1], use_bias = False )
+    conv3 = util.conv2d( bn3, [1,1,num_conv*4], [1,1,1,1], name=name + "/conv3", use_bias = False )
 
     return conv3 + shortcut
 
@@ -52,7 +52,7 @@ class ResNet():
     num_conv  = [64, 128, 256, 512]
 
     input = self.pad( input, 7 )
-    res = util.conv2d( input, [7,7,64], "conv_pre", stride=[1,2,2,1], use_bias = False, padding = 'VALID' )
+    res = util.conv2d( input, [7,7,64], stride=[1,2,2,1], padding = 'VALID', name = "conv_pre", use_bias = False )
     res = tf.nn.max_pool( res, ksize=[1,3,3,1], strides=[1,2,2,1], padding='SAME' )
 
     for j,b in enumerate( blocks ):
