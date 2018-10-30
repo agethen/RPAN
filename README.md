@@ -18,7 +18,7 @@ We provide an example on how to generate the joint maps in `data_handler.py`, se
 The file `video1.npy` is an example of what `load_pose_map()` expects. The format is Tx18x3, where each triplet is (x,y,confidence), and all values are in range [0,1]. In case there are multiple poses, we currently picked the one with highest confidence; if no pose is detected, we set the frame to all-zeros.
 
 ## RGB data
-We assume that the video is stored as a collection of jpeg files. The files are organized as: `PREFIX/video_id/frame_000000.jpg` etc.
+We assume that the video is stored as a collection of jpeg files, sampled at 25 fps. The files are organized as: `PREFIX/video_id/frame_000001.jpg` etc.
 
 ## Miscellaneous
 Unlike the published paper, we use ResNet v2-50 to extract the convolutional cube. You can download our ResNet weights at http://cmlab.csie.ntu.edu.tw/~agethen/resnet_v2.npy .

@@ -4,8 +4,12 @@ import csv
 import cv2
 
 # This class allows the loading of RGB frames and generation of the pose joint maps.
-# We assume the RGB frames are available as jpeg files, and named starting from "frame_000001.jpg".
+# We assume the RGB frames (sampled at 25 fps) are available as jpeg files, and named starting from "frame_000001.jpg".
 # The frames of video xxx are located in a subfolder of same name, which located in PREFIX_RGB.
+
+# Note that we drop missing classes
+# Example: Classes 3,4,1 exist.
+# Resulting mapping: class 1 --> 0, class 3 --> 1, class 4 --> 2
 
 class DataHandler():
   # Read annotations from file `annotation`.
@@ -56,6 +60,10 @@ class DataHandler():
     self.video_shapes = {}
     self.video_crops  = {}
     self.video_ts     = {}
+
+    # Cleanup class annotations
+    self.known_classes= sorted( self.known_classes )
+    self.class_map    = { c : i for i,c in enumerate(self.known_classes) }
 
   # Note: We do not protect against invalid labels (values >= C) at this moment
   def num_classes( self ):
@@ -165,7 +173,7 @@ class DataHandler():
       pb               = self.perm[b]
       cid, vid, ts, te = self.actions[pb]
       
-      label[b-start, :] = cid
+      label[b-start, :] = self.class_map[cid]
 
       # Sample strategies:
       # Train phase: Pick random offset in annotated action, such that we can load T frames
