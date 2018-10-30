@@ -12,6 +12,9 @@ LR          = 1e-3  # Initial learning rate
 GAMMA       = 1e-5  # Regularization weights (L2)
 
 # Load data handler
+# PREFIX_RGB: Path to RGB frames (structured as PREFIX_RGB/video_id/frame_000000.jpg etc)
+# PREFIX_POSE: Path to Pose files (PREFIX_POSE/video_id.npy)
+# annotation: Annotation file, e.g., example.csv
 hnd_train = data.DataHandler( PREFIX_RGB = "/path/to/folder/", PREFIX_POSE = "/path/to/folder/", \
                               annotation = "example.csv", T=T, is_test=False, do_resize=None )
 

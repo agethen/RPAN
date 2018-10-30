@@ -160,10 +160,6 @@ class DataHandler():
     data    = numpy.zeros( [end-start, self.T, 224, 224, 3], dtype=numpy.float32 )
     label   = numpy.zeros( [end-start, self.T], dtype=numpy.int32 )
 
-    self.last_crops = []
-    self.last_shapes= []
-    self.last_ts    = []
-
     for b in range( start, end ):
 
       pb               = self.perm[b]
@@ -190,10 +186,10 @@ class DataHandler():
         self.video_shapes[pb] = (0,0)
         continue
       else:
-        self.video_shapes[pb] = frame.shape
+        self.video_shapes[pb] = frame.shape if self.do_resize is None else self.do_resize
 
       # Generate a random 224x224 crop
-      sh    = frame.shape if self.do_resize is None else self.do_resize
+      sh    = self.video_shapes[pb]
       crop  = (random.randint( 0, sh[0]-224 ), random.randint( 0, sh[1]-224 ))
 
       self.video_crops[pb] = crop

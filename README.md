@@ -3,6 +3,9 @@ Our Tensorflow implementation of Recurrent Pose Attention in Du et al.: "RPAN: A
 
 Note that we are not associated with the original authors.
 
+## Required packages
+Tested with python 2.7. The following additional packages are required: `tensorflow, numpy, csv, cv2`
+
 ## Simple model
 Our simple RPAN model in `model_simple.py` drops the parameter sharing method in Equation (2) of the paper. This is the version used in our submission for CVPR 2018 Moments in Time challenge.
 
@@ -13,6 +16,9 @@ We also attempt provide a model with the original parameter sharing scheme descr
 We provide an example on how to generate the joint maps in `data_handler.py`, see `gkern()` and `load_pose_map()`. Note that we use **Openpose format** (published as Cao et al.: "Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields") throughout the project. If you are using a different pose detector, you will need to modify the code.
 
 The file `video1.npy` is an example of what `load_pose_map()` expects. The format is Tx18x3, where each triplet is (x,y,confidence), and all values are in range [0,1]. In case there are multiple poses, we currently picked the one with highest confidence; if no pose is detected, we set the frame to all-zeros.
+
+## RGB data
+We assume that the video is stored as a collection of jpeg files. The files are organized as: `PREFIX/video_id/frame_000000.jpg` etc.
 
 ## Miscellaneous
 Unlike the published paper, we use ResNet v2-50 to extract the convolutional cube. You can download our ResNet weights at http://cmlab.csie.ntu.edu.tw/~agethen/resnet_v2.npy .
