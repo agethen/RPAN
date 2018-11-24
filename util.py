@@ -1,15 +1,16 @@
 import tensorflow as tf
 import numpy
 
-W = '/home/phd/01/agethen/DCN-Models/resnet_v2.npy'
+# Please adjust the path to the downloaded weights here.
+FILENAME_WEIGHTS = '/home/phd/01/agethen/DCN-Models/resnet_v2.npy'
+
 try:
-  print "Util.py: Loading from", W
-  param_dict = numpy.load( W ).item()
+  print "Util.py: Loading from", FILENAME_WEIGHTS
+  param_dict = numpy.load( FILENAME_WEIGHTS ).item()
 except:
-  print "NOT loading weights, as file", W, "was not found. Please edit util.py."
+  print "NOT loading weights, as file", FILENAME_WEIGHTS, "was not found. Please edit util.py."
   print "Continuing with random weights."
   param_dict = {}
-
 
 # Notes: We do not use any regularizer on bias (Bishop PRML)
 
